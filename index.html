@@ -147,18 +147,20 @@
       appendMeta('User left: ' + data.clientId);
       return;
     }
-    if (data.type === 'message') {
-      // Expect message shape to include name if client provided it
-      const msg = {
-        name: data.name || ('User ' + (data.clientId ? data.clientId.slice(0,8) : '')),
-        text: data.text,
-        ts: data.ts || Date.now(),
-        clientId: data.clientId
-      };
-      renderMessage(msg);
-      pushHistory(msg);
-      return;
-    }
+	if (data.type === 'message') {
+	  // ignore server echo for messages we already rendered locally
+	  if (data.clientId === clientId) return;
+	  const msg = {
+	    name: data.name || ('User ' + (data.clientId ? data.clientId.slice(0,8) : '')),
+	    text: data.text,
+	    ts: data.ts || Date.now(),
+	    clientId: data.clientId
+	  };
+	  renderMessage(msg);
+	  pushHistory(msg);
+	  return;
+	}
+
     appendMeta(JSON.stringify(data));
   }
 
