@@ -23,14 +23,14 @@
 <div class="panel">
   <div style="padding:12px; border-bottom:1px solid #eee; display:flex; align-items:center; gap:12px;">
     <strong>12 uur chat</strong>
-    <label style="font-size:13px;color:#444">Naam: <input id="name" /></label>
-    <button id="saveNameBtn">Sla op</button>
+    <label style="font-size:13px;color:#444">Name: <input id="name" /></label>
+    <button id="saveNameBtn">Save</button>
     <span id="status" style="margin-left:10px;color:#666">disconnected</span>
   </div>
   <div id="log"></div>
   <div id="inputRow">
     <input id="msg" placeholder="Type a message" />
-    <button id="sendBtn">Verzend</button>
+    <button id="sendBtn">Send</button>
   </div>
 </div>
 
@@ -38,7 +38,7 @@
 (function(){
   // Replace with your deployed Worker WebSocket host, e.g.:
   // const WORKER_WS_HOST = "wss://chat-worker.YOUR_SUBDOMAIN.workers.dev";
-  const WORKER_WS_HOST = "wss://serverchat.eaglerlauncher.workers.dev";
+  const WORKER_WS_HOST = "wss://serverchat.eagerlauncher.workers.dev";
   const ROOM = "main"; // fixed single room
 
   // localStorage keys
