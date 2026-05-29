@@ -2,8 +2,8 @@
     'use strict';
 
     var pubnub = new PubNub({
-        publishKey: 'server',
-        subscribeKey: 'server'
+        publishKey: 'demo',
+        subscribeKey: 'demo'
     });
     
     var states = {
