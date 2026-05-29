@@ -11,6 +11,9 @@
         msgs: []
     };
     
+    // Names to hide (case-insensitive)
+    var skipNames = ['chris', 'romain'];
+
     /**
      * Initializes pubnub service
      */
@@ -19,9 +22,13 @@
         // Call event listener when new msg comes in
         pubnub.addListener({
             message: function(data) {
-                var type = data.message.name == states.name ? 'sent' : 'received';
-                var name = type == 'send' ? states.name : data.message.name;
-                states.msgs.push({name:name, text:data.message.text, type:type});
+                var msg = data && data.message ? data.message : {};
+                var sender = msg.name || '';
+                if (skipNames.indexOf(sender.toLowerCase()) !== -1) return; // skip unwanted senders
+
+                var type = sender === states.name ? 'sent' : 'received';
+                var displayName = type === 'sent' ? states.name : sender;
+                states.msgs.push({ name: displayName, text: msg.text, type: type });
             }
         });
 
@@ -37,13 +44,17 @@
                 count : 100
             },
             function (status, response) {
-                var history = response.messages;
-                for (var i=0; i<history.length; i++) {
-                    var type = history[i].entry.name == states.name ? 'sent' : 'received';
+                var history = response && response.messages ? response.messages : [];
+                for (var i = 0; i < history.length; i++) {
+                    var entry = history[i].entry || {};
+                    var sender = entry.name || '';
+                    if (skipNames.indexOf(sender.toLowerCase()) !== -1) continue; // skip unwanted senders
+
+                    var type = sender === states.name ? 'sent' : 'received';
                     states.msgs.push({
-                        name:history[i].entry.name,
-                        text:history[i].entry.text,
-                        type:type
+                        name: sender,
+                        text: entry.text,
+                        type: type
                     });
                 }
             }
@@ -66,21 +77,33 @@
             },
             methods: {
                 /**
-                 * Listener gets call when new msg should be sent
+                 * Existing send helper (keeps same signature)
                  *
                  * @param {string} text The msg to send
                  * @param {function} clear Call this function to clear the message bar component
                  */
                 onSend: function(text, clear) {
-                    if (text.trim().length === 0) return;
+                    if (!text || text.trim().length === 0) return;
                     pubnub.publish({
                         channel: 'server',
                         message: {
-                            text:text,
-                            name:this.name
+                            text: text,
+                            name: this.name
                         }
                     });
-                    if (typeof clear == 'function') clear();
+                    if (typeof clear === 'function') clear();
+                },
+
+                /**
+                 * Framework7 messagebar submit handler.
+                 * Framework7 passes event.detail = { value, clear() }
+                 */
+                messagebarSubmit: function(event) {
+                    var detail = event && event.detail ? event.detail : {};
+                    var value = detail.value || '';
+                    var clearFn = typeof detail.clear === 'function' ? detail.clear : null;
+                    if (!value || value.trim().length === 0) return;
+                    this.onSend(value, clearFn);
                 }
             }
         });
@@ -107,9 +130,7 @@
             },
             framework7: {
                 root: '#app',
-                // material: true, // Remember to change css paths to ios/material theme!
                 material: Framework7.prototype.device.android ? true : false,
-                // Mapping of routes -> templates
                 routes: [{
                     path: '/chat/',
                     component: 'page-chat'
