@@ -2,6 +2,7 @@
     'use strict';
 	const params = new URLSearchParams(window.location.search);
 	const room = params.has('room') && params.get('room') !== null ? params.get('room') : 'server';
+	console.log(room)
     var pubnub = new PubNub({
         publishKey: 'demo',
         subscribeKey: 'demo'
