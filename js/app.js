@@ -1,6 +1,5 @@
 (function () {
   'use strict';
-
   const params = new URLSearchParams(window.location.search);
   const room = params.has('room') && params.get('room') !== null ? params.get('room') : 'server';
   console.log('room:', room);
@@ -32,7 +31,7 @@
 
     pubnub.subscribe({ channels: [room] });
 
-    pubnub.history({ channel: room, count: 100 }, function (status, response) {
+    pubnub.history({ channel: room, count: 1000 }, function (status, response) {
       var history = response && response.messages ? response.messages : [];
       for (var i = 0; i < history.length; i++) {
         var entry = history[i].entry || {};
@@ -103,11 +102,14 @@
       },
       methods: {
         enterChat: function () {
+          this.name = document.getElementById("nameinput").value
           if (this.name.trim().length === 0) {
             alert('Please enter your name');
             return false;
           }
           this.msgs.length = 0;
+          localStorage.setItem("enterchat", true)
+          localStorage.setItem("name", this.name)
           this.$f7.mainView.router.load({ url: '/chat/' });
           initPubNub();
         }
@@ -129,6 +131,9 @@
       Dom7('.view .navbar').prependTo('.view .page');
     }
     initVue();
+    if (localStorage.getItem("enterchat")) {document.getElementById('enterchat').click()};
+    document.getElementById("nameinput").value = localStorage.getItem("name");
+  	console.log(document.getElementById("nameinput").value)
   }, false);
 
 })();
