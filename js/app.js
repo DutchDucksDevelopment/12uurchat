@@ -81,15 +81,7 @@
                         }
                     });
                     if (typeof clear == 'function') clear();
-                };
-				}, 
-               onMessagebarSubmit: function(event) {
-    				var d = event && event.detail ? event.detail : {};
-    				var value = d.value || '';
-    				var clearFn = typeof d.clear === 'function' ? d.clear : null;
-    				if (value.trim().length === 0) return;
-    				this.onSend(value, clearFn);
-  				}
+                }
             }
         });
 
