@@ -1,202 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<title>Google</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<style>
-  body { font-family: system-ui, Arial; margin:0; padding:0; display:flex; height:100vh; }
-  .panel { margin:auto; width:100%; max-width:720px; display:flex; flex-direction:column; height:90vh; border:1px solid #ddd; border-radius:8px; overflow:hidden; }
-  #log { flex:1; padding:12px; overflow:auto; background:#fafafa; }
-  #inputRow { display:flex; gap:8px; padding:10px; border-top:1px solid #eee; align-items:center; }
-  #msg { flex:1; padding:8px; font-size:14px; }
-  #name { width:160px; padding:6px; }
-  button { padding:8px 12px; }
-  .meta { color:#666; font-size:12px; margin-bottom:8px; }
-  .msg { margin:6px 0; }
-  .me { font-weight:600; }
-  .others { color:#222; }
-  .ts { color:#999; font-size:11px; margin-left:6px; }
-</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Google</title>
+  
+  <!-- Scripts -->
+  <script src="cordova.js"></script>
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.0.11.min.js"></script>
+  <script src="js/lib/framework7.min.js"></script>
+  <script src="js/lib/vue.min.js"></script>
+  <script src="js/lib/framework7-vue.min.js"></script>
+  <script src="js/app.js"></script>
+  <!-- End scripts -->
+  
+  <!-- Styles -->
+  <script>
+      if (Framework7.prototype.device.android) {
+          document.write(
+            '<link rel="stylesheet" href="css/framework7.material.min.css">' +
+            '<link rel="stylesheet" href="css/framework7.material.colors.min.css">'
+          );
+      }
+      else {
+        document.write(
+          '<link rel="stylesheet" href="css/framework7.ios.min.css">' +
+          '<link rel="stylesheet" href="css/framework7.ios.colors.min.css">'
+        );
+      }
+  </script>
+  <link rel="stylesheet" href="css/app.css">
+  <!-- End styles -->
+
 </head>
+
 <body>
-<div class="panel">
-  <div style="padding:12px; border-bottom:1px solid #eee; display:flex; align-items:center; gap:12px;">
-    <strong>12 uur chat</strong>
-    <label style="font-size:13px;color:#444">Name: <input id="name" /></label>
-    <button id="saveNameBtn">Save</button>
-    <span id="status" style="margin-left:10px;color:#666">disconnected</span>
+  <div id="app">
+    <!-- Statusbar -->
+    <!-- NOTE: You may need to comment out the next line depending on what device you're running on and see the app title cut off -->
+    <f7-statusbar></f7-statusbar>
+
+    <!-- Main Views -->
+    <f7-views>
+      <f7-view id="main-view" navbar-through :dynamic-navbar="true" main>
+
+        <!-- Navbar -->
+        <f7-navbar back-link="Back" sliding>
+          <f7-nav-center sliding>12 uur chat</f7-nav-center>
+        </f7-navbar>
+
+        <!-- Pages -->
+        <f7-pages>
+          <f7-page>
+            <f7-block-title>12 uur chat</f7-block-title>
+            <f7-list>
+              <f7-list-item>
+                <f7-input @keyup.enter="enterChat" type="text" placeholder="Your name" v-model:value="name" />
+              </f7-list-item>
+              <f7-list-button v-on:click="enterChat">Enter chat</f7-list-button>
+            </f7-list>
+          </f7-page>
+        </f7-pages>
+      </f7-view>
+    </f7-views>
   </div>
-  <div id="log"></div>
-  <div id="inputRow">
-    <input id="msg" placeholder="Type a message" />
-    <button id="sendBtn">Send</button>
-  </div>
-</div>
 
-<script>
-(function(){
-  // Replace with your deployed Worker WebSocket host, e.g.:
-  // const WORKER_WS_HOST = "wss://chat-worker.YOUR_SUBDOMAIN.workers.dev";
-  const WORKER_WS_HOST = "wss://serverchat.eagerlauncher.workers.dev";
-  const ROOM = "main"; // fixed single room
+  <!-- Chat Page Template -->
+  <template id="page-chat">
+    <f7-page>
+      <f7-messages>
+        <f7-message v-for="msg in msgs" :name="msg.name" :text="msg.text" :type="msg.type"></f7-message>
+      </f7-messages>
+      <f7-messagebar placeholder="Message" send-link="Send" v-on:submit="onSend"></f7-messagebar>
+    </f7-page>
+  </template>
 
-  // localStorage keys
-  const LS_NAME = 'chat_name_v1';
-  const LS_HISTORY = 'chat_history_v1'; // JSON array of {name, text, ts, clientId}
-
-  const nameInput = document.getElementById('name');
-  const saveNameBtn = document.getElementById('saveNameBtn');
-  const sendBtn = document.getElementById('sendBtn');
-  const log = document.getElementById('log');
-  const status = document.getElementById('status');
-  const msgIn = document.getElementById('msg');
-
-  let ws = null;
-  let clientId = null;
-  let localName = loadName() || generateAnonName();
-
-  nameInput.value = localName;
-
-  // Load chat history from localStorage and render
-  const history = loadHistory();
-  for (const item of history) renderMessage(item);
-
-  function saveName(name) {
-    localStorage.setItem(LS_NAME, name);
-    localName = name;
-  }
-  function loadName() {
-    return localStorage.getItem(LS_NAME);
-  }
-  function saveHistory(arr) {
-    try { localStorage.setItem(LS_HISTORY, JSON.stringify(arr.slice(-500))); } catch (e) {}
-  }
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(LS_HISTORY);
-      if (!raw) return [];
-      return JSON.parse(raw);
-    } catch (e) { return []; }
-  }
-  function pushHistory(entry) {
-    const h = loadHistory();
-    h.push(entry);
-    saveHistory(h);
-  }
-
-  function generateAnonName() {
-    return 'Anon-' + Math.random().toString(36).slice(2,8);
-  }
-
-  function appendLine(el) {
-    log.appendChild(el);
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function renderMessage(msg) {
-    const d = document.createElement('div');
-    d.className = 'msg ' + (msg.clientId && msg.clientId === clientId ? 'me' : 'others');
-    const nameSpan = document.createElement('strong');
-    nameSpan.textContent = msg.name || ('User ' + (msg.clientId ? msg.clientId.slice(0,8) : ''));
-    const tsSpan = document.createElement('span');
-    tsSpan.className = 'ts';
-    tsSpan.textContent = new Date(msg.ts || Date.now()).toLocaleTimeString();
-    const textDiv = document.createElement('div');
-    textDiv.textContent = msg.text;
-    d.appendChild(nameSpan);
-    d.appendChild(tsSpan);
-    d.appendChild(document.createElement('br'));
-    d.appendChild(textDiv);
-    appendLine(d);
-  }
-
-  function setStatus(s) { status.textContent = s; }
-
-  function connect() {
-    if (!WORKER_WS_HOST || WORKER_WS_HOST.includes("<WORKER_WS_HOST>")) {
-      setStatus("set WORKER_WS_HOST in the file");
-      return;
-    }
-    if (ws) ws.close();
-    const url = WORKER_WS_HOST + '/?room=' + ROOM;
-    ws = new WebSocket(url);
-    ws.addEventListener('open', () => setStatus('connected'));
-    ws.addEventListener('close', () => { setStatus('disconnected'); ws = null; });
-    ws.addEventListener('error', () => { setStatus('error'); });
-    ws.addEventListener('message', ev => {
-      try {
-        const data = JSON.parse(ev.data);
-        handleMessage(data);
-      } catch (e) {}
-    });
-  }
-
-  function handleMessage(data) {
-    if (data.type === 'welcome') {
-      clientId = data.clientId;
-      appendMeta('You joined the main room');
-      // Update any history items that were stored before we had clientId (optional)
-      return;
-    }
-    if (data.type === 'join') {
-      appendMeta('User joined: ' + data.clientId);
-      return;
-    }
-    if (data.type === 'leave') {
-      appendMeta('User left: ' + data.clientId);
-      return;
-    }
-	if (data.type === 'message') {
-	  // ignore server echo for messages we already rendered locally
-	  if (data.clientId === clientId) return;
-	  const msg = {
-	    name: data.name || ('User ' + (data.clientId ? data.clientId.slice(0,8) : '')),
-	    text: data.text,
-	    ts: data.ts || Date.now(),
-	    clientId: data.clientId
-	  };
-	  renderMessage(msg);
-	  pushHistory(msg);
-	  return;
-	}
-
-    appendMeta(JSON.stringify(data));
-  }
-
-  function appendMeta(text) {
-    const d = document.createElement('div');
-    d.className = 'meta';
-    d.textContent = text;
-    appendLine(d);
-  }
-
-  saveNameBtn.addEventListener('click', () => {
-    const v = (nameInput.value || '').trim();
-    if (!v) return;
-    saveName(v);
-    appendMeta('Name saved as: ' + v);
-  });
-
-  sendBtn.addEventListener('click', sendMessage);
-  msgIn.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
-
-  function sendMessage() {
-    const text = msgIn.value.trim();
-    if (!text) return;
-    if (!ws || ws.readyState !== WebSocket.OPEN) { appendMeta('Not connected'); return; }
-    const payload = { type: 'message', text, name: localName };
-    ws.send(JSON.stringify(payload));
-    // Optimistically render & store
-    const localMsg = { name: localName, text, ts: Date.now(), clientId: clientId || null };
-    renderMessage(localMsg);
-    pushHistory(localMsg);
-    msgIn.value = '';
-  }
-
-  // start
-  connect();
-})();
-</script>
 </body>
+
 </html>
