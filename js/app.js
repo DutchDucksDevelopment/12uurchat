@@ -1,6 +1,7 @@
 (function () {
     'use strict';
-
+	const params = new URLSearchParams(window.location.search);
+	const room = params.has('room') && params.get('room') !== null ? params.get('room') : 'server';
     var pubnub = new PubNub({
         publishKey: 'demo',
         subscribeKey: 'demo'
@@ -34,13 +35,13 @@
 
         // Subscribe to these channels
         pubnub.subscribe({
-            channels: ['server']
+            channels: [room]
         });
         
         // Load chat history
         pubnub.history(
             {
-                channel : 'server',
+                channel : room,
                 count : 100
             },
             function (status, response) {
@@ -85,7 +86,7 @@
                 onSend: function(text, clear) {
                     if (!text || text.trim().length === 0) return;
                     pubnub.publish({
-                        channel: 'server',
+                        channel: room,
                         message: {
                             text: text,
                             name: this.name
