@@ -1,10 +1,19 @@
 <!doctype html>
 <html>
 <head>
-  <meta http-equiv="refresh" content="0;url=https://dutchducksdevelopment.github.io/chat/">
-  <title>Redirecting…</title>
+  <title>Redirecting...</title>
 </head>
 <body>
-  This is the old repository! If you are not redirected automatically, <a href="https://dutchducksdevelopment.github.io/chat/">click here</a>.
+  This is the old repository! If you are not redirected automatically, <a id="fallback" href="https://dutchducksdevelopment.github.io/chat/">click here</a>
+  <script>
+    // get query params
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    const base = 'https://dutchducksdevelopment.github.io/chat/';
+    const target = room ? `${base}?room=${encodeURIComponent(room)}` : base;
+    // update fallback link and redirect
+    document.getElementById('fallback').href = target;
+    window.location.replace(target); // replace avoids adding a history entry
+  </script>
 </body>
 </html>
