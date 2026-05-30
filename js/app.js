@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+
   const params = new URLSearchParams(window.location.search);
   const room = params.has('room') && params.get('room') !== null ? params.get('room') : 'server';
   console.log('room:', room);
@@ -31,7 +32,7 @@
 
     pubnub.subscribe({ channels: [room] });
 
-    pubnub.history({ channel: room, count: 1000 }, function (status, response) {
+    pubnub.history({ channel: room, count: 100 }, function (status, response) {
       var history = response && response.messages ? response.messages : [];
       for (var i = 0; i < history.length; i++) {
         var entry = history[i].entry || {};
@@ -79,18 +80,51 @@
       mounted: function () {
         var self = this;
         this.$nextTick(function () {
-          var container = document.querySelector('.app-messagebar');
-          if (!container) return;
-          var ta = container.querySelector('textarea');
-          if (!ta) return;
-          ta.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
+          // this.$refs.msgbar is the Framework7-Vue component instance, get its DOM element
+          var comp = self.$refs.msgbar;
+          if (!comp) return;
+          var container = comp.$el || comp.el || comp;
+          if (!container || typeof container.querySelector !== 'function') return;
+
+          // find textarea (Framework7 renders a textarea inside messagebar)
+          var ta = container.querySelector('textarea') || container.querySelector('input');
+
+          // Enter key sends (no Shift)
+          if (ta) {
+            ta.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var value = ta.value || '';
+                if (!value.trim()) return;
+                var clearFn = function () { ta.value = ''; };
+                if (comp.f7Messagebar && typeof comp.f7Messagebar.clear === 'function') {
+                  clearFn = function () { comp.f7Messagebar.clear(); };
+                }
+                self.onSend(value, clearFn);
+              }
+            });
+          }
+
+          // find send button and attach click (fallback if v-on:submit doesn't fire)
+          var sendBtn = container.querySelector('.messagebar-send, .button, .link') ||
+                        Array.from(container.querySelectorAll('button, a')).find(el => el.textContent.trim().toLowerCase() === 'send');
+          if (sendBtn) {
+            sendBtn.addEventListener('click', function (e) {
               e.preventDefault();
-              var value = ta.value || '';
-              if (!value.trim()) return;
-              self.onSend(value, function () { ta.value = ''; });
-            }
-          });
+              var value = '';
+              if (comp.f7Messagebar && typeof comp.f7Messagebar.value === 'function') {
+                value = comp.f7Messagebar.value();
+              } else if (ta) {
+                value = ta.value;
+              }
+              if (!value || !value.trim()) return;
+              var clearFn = function () { if (ta) ta.value = ''; };
+              if (comp.f7Messagebar && typeof comp.f7Messagebar.clear === 'function') {
+                clearFn = function () { comp.f7Messagebar.clear(); };
+              }
+              self.onSend(value, clearFn);
+            });
+          }
         });
       }
     });
@@ -102,14 +136,11 @@
       },
       methods: {
         enterChat: function () {
-          this.name = document.getElementById("nameinput").value
           if (this.name.trim().length === 0) {
             alert('Please enter your name');
             return false;
           }
           this.msgs.length = 0;
-          localStorage.setItem("enterchat", true)
-          localStorage.setItem("name", this.name)
           this.$f7.mainView.router.load({ url: '/chat/' });
           initPubNub();
         }
@@ -131,9 +162,6 @@
       Dom7('.view .navbar').prependTo('.view .page');
     }
     initVue();
-    if (localStorage.getItem("enterchat")) {document.getElementById('enterchat').click()};
-    document.getElementById("nameinput").value = localStorage.getItem("name");
-  	console.log(document.getElementById("nameinput").value)
   }, false);
 
 })();
