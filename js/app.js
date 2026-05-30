@@ -60,10 +60,15 @@
       methods: {
         onSend: function (text, clear) {
           if (!text || text.trim().length === 0) return;
+          let now = new Date();
+		  let hours = now.getHours();
+		  let minutes = now.getMinutes();
+		  let seconds = now.getSeconds();
+		  let time = `${hours} : ${minutes} : ${seconds}`
           pubnub.publish({
             channel: room,
             message: {
-              text: text,
+              text: `${time} | ${text}`,
               name: this.name
             }
           });
@@ -136,10 +141,12 @@
       },
       methods: {
         enterChat: function () {
+          this.name = document.getElementById("nameinput").value
           if (this.name.trim().length === 0) {
             alert('Please enter your name');
             return false;
           }
+          localStorage.setItem("name", this.name)
           this.msgs.length = 0;
           this.$f7.mainView.router.load({ url: '/chat/' });
           initPubNub();
@@ -162,12 +169,15 @@
 	if (room != "server") {
 		roomname.innerHTML = room;
 		console.log("set innerHTML")
-	};
+	};	
+	if (!localStorage.getItem('name')) {localStorage.setItem('name', '')}
     if (Framework7.prototype.device && Framework7.prototype.device.android) {
       Dom7('.view.navbar-through').removeClass('navbar-through').addClass('navbar-fixed');
       Dom7('.view .navbar').prependTo('.view .page');
     }
     initVue();
+    document.getElementById("nameinput").value = localStorage.getItem('name')
+	console.log(document.getElementById("nameinput").value + localStorage.getItem('name'))
   }, false);
 
 })();

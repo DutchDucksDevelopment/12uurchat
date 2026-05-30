@@ -48,7 +48,7 @@
             <f7-block-title id="roomtitle">12 uur chat</f7-block-title>
             <f7-list>
               <f7-list-item>
-                <f7-input @keyup.enter="enterChat" type="text" placeholder="Your name" v-model:value="name" />
+                <f7-input id='nameinput' @keyup.enter="enterChat" type="text" placeholder="Your name" v-model:value="name" />
               </f7-list-item>
               <f7-list-button id="enterbutton" v-on:click="enterChat">Enter chat</f7-list-button>
             </f7-list>
