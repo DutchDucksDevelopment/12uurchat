@@ -104,7 +104,7 @@
               }
             });
           }
-
+          
           // find send button and attach click (fallback if v-on:submit doesn't fire)
           var sendBtn = container.querySelector('.messagebar-send, .button, .link') ||
                         Array.from(container.querySelectorAll('button, a')).find(el => el.textContent.trim().toLowerCase() === 'send');
@@ -157,6 +157,12 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    var roomname = document.getElementById("roomtitle");
+    console.log("here")
+	if (room != "server") {
+		roomname.innerHTML = room;
+		console.log("set innerHTML")
+	};
     if (Framework7.prototype.device && Framework7.prototype.device.android) {
       Dom7('.view.navbar-through').removeClass('navbar-through').addClass('navbar-fixed');
       Dom7('.view .navbar').prependTo('.view .page');
